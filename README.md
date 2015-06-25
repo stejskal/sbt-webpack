@@ -16,6 +16,15 @@ As with all sbt-web asset pipeline plugins you must declare their order of execu
 pipelineStages := Seq(webpack)
 ```
 
+finally you will need to add a package.json file at the root of your project that contains:
+```json
+{
+  "devDependencies": {
+    "webpack": "^1.9.11"
+  }
+}
+```
+
 The plugin processes all files that match the filter:
 ```scala
 includeFilter in webpack

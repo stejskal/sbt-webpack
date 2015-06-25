@@ -13,8 +13,10 @@ import sbt._
 
 object WebpackPlugin extends AutoPlugin
 {
+
   object autoImport
   {
+
     case class External(internalDep: String, externalDep: String)
 
     lazy val webpack = taskKey[Pipeline.Stage]("uses webpack to combine javascript into a single file")
@@ -24,7 +26,9 @@ object WebpackPlugin extends AutoPlugin
   import autoImport._
 
   override def requires: Plugins = SbtJsTask
+
   override def trigger: PluginTrigger = allRequirements
+
   override def projectSettings = Seq(
     webpackExternals in webpack := Seq(),
     excludeFilter in webpack := new SimpleFileFilter({
@@ -42,8 +46,14 @@ object WebpackPlugin extends AutoPlugin
       val include = (includeFilter in webpack).value
       val exclude = (excludeFilter in webpack).value
       val webpackMappings = mappings.filter(f => !f._1.isDirectory && include.accept(f._1) && !exclude.accept(f._1))
+      val allJsHashes = mappings.foldLeft(Array[Byte]())
+      {
+        case (agg, (file, _)) =>
+          if (file.getName.endsWith(".js")) agg ++ file.hash
+          else agg
+      }
 
-      implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashString(path._1.getAbsolutePath))
+      implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashBytes(allJsHashes))
 
       val configFile = (target in Assets).value / "webpack" / "config.js"
 
@@ -54,8 +64,8 @@ object WebpackPlugin extends AutoPlugin
 
       IO.write(configFile,
         s"""|module.exports = {
-            |  externals: {$externalsJsArray}
-            |};
+           | externals: {$externalsJsArray}
+                                            |};
         """.stripMargin)
 
       val (outputFiles, _) = incremental.syncIncremental(streams.value.cacheDirectory / "run", webpackMappings)

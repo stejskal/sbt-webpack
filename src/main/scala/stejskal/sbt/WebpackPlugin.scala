@@ -5,7 +5,7 @@ import com.typesafe.sbt.jse.SbtJsEngine.autoImport.JsEngineKeys._
 import com.typesafe.sbt.jse._
 import com.typesafe.sbt.web.SbtWeb.autoImport.WebKeys._
 import com.typesafe.sbt.web.SbtWeb.autoImport._
-import com.typesafe.sbt.web.incremental
+import com.typesafe.sbt.web.{SbtWeb, incremental}
 import com.typesafe.sbt.web.incremental.{OpFailure, OpInputHash, OpInputHasher, OpSuccess}
 import com.typesafe.sbt.web.pipeline.Pipeline
 import sbt.Keys._
@@ -45,17 +45,24 @@ object WebpackPlugin extends AutoPlugin
     mappings =>
       val include = (includeFilter in webpack).value
       val exclude = (excludeFilter in webpack).value
+      val resolveDir = (target in Assets).value / "webpack"
       val webpackMappings = mappings.filter(f => !f._1.isDirectory && include.accept(f._1) && !exclude.accept(f._1))
-      val allJsHashes = mappings.foldLeft(Array[Byte]())
+      val (jsMappings, jsHashes) = mappings.foldLeft((List[(File, String)](), Array[Byte]()))
       {
-        case (agg, (file, _)) =>
-          if (file.getName.endsWith(".js")) agg ++ file.hash
-          else agg
+        case ((mappingAgg, hashAgg), mapping) =>
+          if (mapping._1.getName.endsWith(".js")) (mapping :: mappingAgg, hashAgg ++ mapping._1.hash)
+          else (mappingAgg, hashAgg)
       }
 
-      implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashBytes(allJsHashes))
+      SbtWeb.syncMappings(
+        streams.value.cacheDirectory,
+        jsMappings,
+        resolveDir
+      )
 
-      val configFile = (target in Assets).value / "webpack" / "config.js"
+      implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashBytes(jsHashes))
+
+      val configFile = resolveDir / "config.js"
 
       val externalsJsArray = (webpackExternals in webpack).value.map
       {
@@ -81,8 +88,9 @@ object WebpackPlugin extends AutoPlugin
             val result = inputs.map
             {
               input =>
-                val (inputFile, outputPath) = input
-                val outputFile = (resourceManaged in webpack).value / outputPath.replace(".js", ".packed.js")
+                val (_, relativePath) = input
+                val inputFile = resolveDir / relativePath
+                val outputFile = (resourceManaged in webpack).value / relativePath.replace(".js", ".packed.js")
                 val args = Seq(inputFile.getAbsolutePath, outputFile.getAbsolutePath, "--config", configFile.getAbsolutePath)
                 val execution = SbtJsTask.executeJs(
                   state.value,

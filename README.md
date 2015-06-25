@@ -48,8 +48,8 @@ expose a dummy module that only exports the global javascript variable named "Re
 
 Improvements needed:
 * expose all webpack options
-* figure out a more robust way to allow webpack to resolve relative modules
 * custom output filenames
+* figure out how to package/install webpack js file without requiring projects to have a package.json file
 * per input file webpack settings?
 
 Thanks to [TaskEasy](https://www.taskeasy.com/) for allowing me to work on this plugin.

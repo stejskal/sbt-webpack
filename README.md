@@ -5,7 +5,7 @@ An SBT plugin to bundle javascript modules using the [webpack module bundler](ht
 
 To use this plugin use the addSbtPlugin command within your project's `plugins.sbt` file:
 
-    addSbtPlugin("stejskal" % "sbt-webpack" % "0.1")
+    addSbtPlugin("stejskal" % "sbt-webpack" % "0.2")
 
 Your project's build file also needs to enable sbt-web plugins. For example with build.sbt:
 
@@ -67,5 +67,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
-The plugin is built on top of [JavaScript Engine](https://github.com/typesafehub/js-engine) which supports different JavaScript runtimes.

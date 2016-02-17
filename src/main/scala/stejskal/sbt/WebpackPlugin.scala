@@ -20,7 +20,6 @@ object WebpackPlugin extends AutoPlugin
     case class External(internalDep: String, externalDep: String)
 
     lazy val webpack = taskKey[Pipeline.Stage]("uses webpack to combine javascript into a single file")
-    lazy val webpackExternals = settingKey[Seq[External]]("list of modules mapped to their eventual global variable name to exclude from webpack concatenation. Maps to 'externals' webpack configuration parameter.")
   }
 
   import autoImport._
@@ -30,7 +29,6 @@ object WebpackPlugin extends AutoPlugin
   override def trigger: PluginTrigger = allRequirements
 
   override def projectSettings = Seq(
-    webpackExternals in webpack := Seq(),
     excludeFilter in webpack := new SimpleFileFilter({
       f =>
         def fileStartsWith(dir: File): Boolean = f.getPath.startsWith(dir.getPath)
@@ -62,18 +60,7 @@ object WebpackPlugin extends AutoPlugin
 
       implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashBytes(jsHashes))
 
-      val configFile = resolveDir / "config.js"
-
-      val externalsJsArray = (webpackExternals in webpack).value.map
-      {
-        case External(inside, outside) => s"""'$inside': '$outside'"""
-      }.mkString(",")
-
-      IO.write(configFile,
-        s"""|module.exports = {
-           | externals: {$externalsJsArray}
-                                            |};
-        """.stripMargin)
+      val configFile = baseDirectory.value / "webpack.config.js" 
 
       val (outputFiles, _) = incremental.syncIncremental(streams.value.cacheDirectory / "run", webpackMappings)
       {

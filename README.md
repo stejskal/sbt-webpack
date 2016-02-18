@@ -46,7 +46,7 @@ webpackExternals in webpack += External("react", "React")
 this will cause webpack to skip inclusion of the module named "react" in the resulting bundle and instead
 expose a dummy module that only exports the global javascript variable named "React" (notice the title case difference).
 
-If you would like to supply your own webpack configuration file e.g. webpack.config.js, you'll have to use a set a setting for the plugin in the form of: 
+If you would like to supply your own webpack configuration file e.g. webpack.config.js, you'll have to set a setting for the plugin in the form of: 
 
 ```scala 
 webpackConfig in webpack := Some(path_to_config_file)

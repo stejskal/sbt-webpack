@@ -20,6 +20,8 @@ object WebpackPlugin extends AutoPlugin
     case class External(internalDep: String, externalDep: String)
 
     lazy val webpack = taskKey[Pipeline.Stage]("uses webpack to combine javascript into a single file")
+    lazy val webpackExternals = settingKey[Seq[External]]("list of modules mapped to their eventual global variable name to exclude from webpack concatenation. Maps to 'externals' webpack configuration parameter.")
+    lazy val webpackConfig = settingKey[Option[File]]("The location of a webpack configuration file.")
   }
 
   import autoImport._
@@ -29,6 +31,8 @@ object WebpackPlugin extends AutoPlugin
   override def trigger: PluginTrigger = allRequirements
 
   override def projectSettings = Seq(
+    webpackConfig in webpack := None,
+    webpackExternals in webpack := Seq(),
     excludeFilter in webpack := new SimpleFileFilter({
       f =>
         def fileStartsWith(dir: File): Boolean = f.getPath.startsWith(dir.getPath)
@@ -60,7 +64,30 @@ object WebpackPlugin extends AutoPlugin
 
       implicit val opInputHasher = OpInputHasher[(File, String)](path => OpInputHash.hashBytes(jsHashes))
 
-      val configFile = baseDirectory.value / "webpack.config.js" 
+      var configFile: File = null
+
+      if((webpackConfig in webpack).value == None) {
+          val defaultConfig = baseDirectory.value / "webpack.config.js"
+          if(defaultConfig.exists()) {
+            configFile = defaultConfig
+          } else {
+              configFile = resolveDir / "config.js"
+              val externalsJsArray = (webpackExternals in webpack).value.map
+              {
+                case External(inside, outside) => s"""'$inside': '$outside'"""
+                
+              }.mkString(",")
+
+              IO.write(configFile,
+                s"""|module.exports = {
+                   | externals: {$externalsJsArray}
+                                                    |};
+                """.stripMargin)
+                }
+         
+      } else {
+        configFile = (webpackConfig in webpack).value.get
+      }
 
       val (outputFiles, _) = incremental.syncIncremental(streams.value.cacheDirectory / "run", webpackMappings)
       {
@@ -78,7 +105,7 @@ object WebpackPlugin extends AutoPlugin
                 val (_, relativePath) = input
                 val inputFile = resolveDir / relativePath
                 val outputFile = (resourceManaged in webpack).value / relativePath.replace(".js", ".packed.js")
-                val args = Seq(inputFile.getAbsolutePath, outputFile.getAbsolutePath, "--config", configFile.getAbsolutePath)
+                var args = Seq(inputFile.getAbsolutePath, outputFile.getAbsolutePath, "--config", configFile.getAbsolutePath)
                 val execution = SbtJsTask.executeJs(
                   state.value,
                   (engineType in webpack).value,

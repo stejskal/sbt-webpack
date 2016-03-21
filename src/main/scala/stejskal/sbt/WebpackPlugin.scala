@@ -52,7 +52,8 @@ object WebpackPlugin extends AutoPlugin
       val (jsMappings, jsHashes) = mappings.foldLeft((List[(File, String)](), Array[Byte]()))
       {
         case ((mappingAgg, hashAgg), mapping) =>
-          if (mapping._1.getName.endsWith(".js")) (mapping :: mappingAgg, hashAgg ++ mapping._1.hash)
+          val (file, _) = mapping
+          if (file.isFile && file.getName.endsWith(".js")) (mapping :: mappingAgg, hashAgg ++ file.hash)
           else (mappingAgg, hashAgg)
       }
 

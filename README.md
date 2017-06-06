@@ -1,5 +1,8 @@
 sbt-webpack
 ==========
+**Only tested with webpack 1**
+
+**No Longer Supported**
 
 An SBT plugin to bundle javascript modules using the [webpack module bundler](http://webpack.github.io/).
 
